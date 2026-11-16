@@ -5,6 +5,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class Main {
 
@@ -12,6 +13,7 @@ public class Main {
             Usage:
               add <yyyy-mm-dd> <category> <amount> [description...]
               list
+              summary
             """;
 
     public static void main(String[] args) throws Exception {
@@ -26,8 +28,9 @@ public class Main {
         ExpenseRepository repo = new ExpenseRepository(db);
 
         switch (args[0]) {
-            case "add"  -> handleAdd(repo, args);
-            case "list" -> handleList(repo);
+            case "add"     -> handleAdd(repo, args);
+            case "list"    -> handleList(repo);
+            case "summary" -> handleSummary(repo);
             default -> {
                 System.out.println("Unknown command: " + args[0]);
                 System.out.print(USAGE);
@@ -85,5 +88,29 @@ public class Main {
             total += e.amount();
         }
         System.out.printf("%-28s %10.2f%n", "TOTAL", total);
+    }
+
+    private static void handleSummary(ExpenseRepository repo) throws Exception {
+        Map<String, Double> byCategory = repo.totalsByCategory();
+        if (byCategory.isEmpty()) {
+            System.out.println("No expenses yet.");
+            return;
+        }
+
+        System.out.println("By category:");
+        printTotals(byCategory);
+
+        System.out.println();
+        System.out.println("By month:");
+        printTotals(repo.totalsByMonth());
+    }
+
+    private static void printTotals(Map<String, Double> totals) {
+        double grand = 0;
+        for (Map.Entry<String, Double> entry : totals.entrySet()) {
+            System.out.printf("  %-14s %10.2f%n", entry.getKey(), entry.getValue());
+            grand += entry.getValue();
+        }
+        System.out.printf("  %-14s %10.2f%n", "TOTAL", grand);
     }
 }

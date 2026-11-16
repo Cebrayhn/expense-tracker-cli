@@ -8,7 +8,8 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.LinkedHashMap;
+import java.util.Map;
 /**
  * All SQL for the expenses table lives here, so the rest of the app
  * never builds SQL strings by hand.
@@ -56,5 +57,29 @@ public class ExpenseRepository {
             }
         }
         return result;
+    }
+    /** Total amount per category, biggest first. */
+    public Map<String, Double> totalsByCategory() throws SQLException {
+        String sql = "SELECT category, SUM(amount) AS total FROM expenses GROUP BY category ORDER BY total DESC";
+        return runTotalsQuery(sql, "category");
+    }
+
+    /** Total amount per month (yyyy-mm), newest first. */
+    public Map<String, Double> totalsByMonth() throws SQLException {
+        String sql = "SELECT substr(date, 1, 7) AS month, SUM(amount) AS total FROM expenses GROUP BY month ORDER BY month DESC";
+        return runTotalsQuery(sql, "month");
+    }
+
+    /** Shared helper: runs a "label, total" query and keeps the row order. */
+    private Map<String, Double> runTotalsQuery(String sql, String labelColumn) throws SQLException {
+        Map<String, Double> totals = new LinkedHashMap<>();
+        try (Connection conn = db.connect();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                totals.put(rs.getString(labelColumn), rs.getDouble("total"));
+            }
+        }
+        return totals;
     }
 }
